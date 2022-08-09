@@ -25,7 +25,11 @@ function paintToCanvas() {
 
   return setInterval(() => {
     context.drawImage(video, 0, 0, width, height);
-  }, 2000);
+    let pixels = context.getImageData(0, 0, canvas.width, canvas.height);
+    // pixels = redShift(pixels);
+    // pixels = rgbSplit(pixels);
+    context.putImageData(pixels, 0, 0);
+  }, 10000);
 }
 
 function takePhoto() {
@@ -37,6 +41,69 @@ function takePhoto() {
   link.setAttribute("download", "photo");
   link.innerHTML = `<img src=${data} alt="photo"/>`;
   strip.appendChild(link);
+}
+
+function redShift(pixels: ImageData) {
+  for (let i = 0; i <= pixels.data.length; i += 4) {
+    pixels.data[i + 0] = pixels.data[i + 0] + 100;
+    pixels.data[i + 1] = pixels.data[i + 1] - 100;
+    pixels.data[i + 2] = pixels.data[i + 2] + 50;
+  }
+
+  return pixels;
+}
+
+function rgbSplit(pixels: ImageData) {
+  for (let i = 0; i < pixels.data.length; i += 4) {
+    pixels.data[i - 150] = pixels.data[i + 0]; // RED
+    pixels.data[i + 500] = pixels.data[i + 1]; // GREEN
+    pixels.data[i - 550] = pixels.data[i + 2]; // Blue
+  }
+  return pixels;
+}
+
+interface Levels {
+  rmin: number;
+  rmax: number;
+  bmin: number;
+  bmax: number;
+  gmin: number;
+  gmax: number;
+}
+
+function greenScreen(pixels: ImageData) {
+  const levels: Levels = {
+    rmin: 0,
+    rmax: 0,
+    bmin: 0,
+    bmax: 0,
+    gmin: 0,
+    gmax: 0,
+  };
+
+  document.querySelectorAll(".rgb input").forEach((input: HTMLInputElement) => {
+    levels[input.name as keyof Levels] = parseInt(input.value);
+  });
+
+  for (let i = 0; i < pixels.data.length; i = i + 4) {
+    let red = pixels.data[i + 0];
+    let green = pixels.data[i + 1];
+    let blue = pixels.data[i + 2];
+
+    if (
+      red >= levels.rmin &&
+      green >= levels.gmin &&
+      blue >= levels.bmin &&
+      red <= levels.rmax &&
+      green <= levels.gmax &&
+      blue <= levels.bmax
+    ) {
+      // take it out!
+      pixels.data[i + 3] = 0;
+    }
+  }
+
+  return pixels;
 }
 
 getVideo();
